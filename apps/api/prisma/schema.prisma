@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+// ---------------------------------------------------------------------------
+// Socio: persona atendida en mostrador.
+// ---------------------------------------------------------------------------
+
+model Socio {
+  id         String   @id @default(cuid())
+  nombre     String
+  celular    String
+  dni        String   @unique
+  patologias String?  @db.Text // problemas de salud, texto libre
+  objetivos  String?  @db.Text // objetivos del socio, texto libre
+  activo     Boolean  @default(true)
+  fechaAlta  DateTime @default(now()) @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  membresias Membresia[]
+  pagos      Pago[]
+  reservas   Reserva[]
+  rutinas    Rutina[]
+
+  @@index([activo])
+}
+
+// ---------------------------------------------------------------------------
+// Membresia: vigencia "de fecha a fecha" (ej. del 15 al 15).
+// Un socio puede tener varias a lo largo del tiempo (historial); la vigente
+// es la de mayor fechaFin. Se crea/extiende al registrar un Pago.
+// ---------------------------------------------------------------------------
+
+model Membresia {
+  id          String   @id @default(cuid())
+  socioId     String
+  socio       Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+  fechaInicio DateTime @db.Date
+  fechaFin    DateTime @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pagos Pago[]
+
+  @@index([socioId, fechaFin])
+}
+
+// ---------------------------------------------------------------------------
+// Pago: siempre por el monto TOTAL (sin parciales). Cada pago financia
+// exactamente un período de membresía (la crea o la extiende +30 días).
+// ---------------------------------------------------------------------------
+
+model Pago {
+  id          String     @id @default(cuid())
+  socioId     String
+  socio       Socio      @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  membresiaId String
+  membresia   Membresia  @relation(fields: [membresiaId], references: [id], onDelete: Restrict)
+  monto       Decimal    @db.Decimal(10, 2)
+  metodo      MetodoPago
+  fechaPago   DateTime   @default(now()) @db.Date
+
+  createdAt DateTime @default(now())
+
+  @@index([socioId])
+  @@index([membresiaId])
+}
+
+// ---------------------------------------------------------------------------
+// Turno: franja semanal recurrente de 1 hora con cupo máximo (4–5).
+// horaInicio en formato "HH:mm" (24 h). El cupo se valida en servicio.
+// ---------------------------------------------------------------------------
+
+model Turno {
+  id         String    @id @default(cuid())
+  dia        DiaSemana
+  horaInicio String // "HH:mm"
+  cupoMax    Int       @default(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservas Reserva[]
+
+  @@unique([dia, horaInicio])
+  @@index([dia])
+}
+
+// ---------------------------------------------------------------------------
+// Reserva: un Socio integra un Turno (grupo semanal fijo: quien se anota
+// los lunes a las 18:00, asiste todos los lunes a las 18:00).
+// El cupo se controla en servicio contando las reservas del turno.
+// ---------------------------------------------------------------------------
+
+model Reserva {
+  id      String @id @default(cuid())
+  socioId String
+  socio   Socio  @relation(fields: [socioId], references: [id], onDelete: Cascade)
+  turnoId String
+  turno   Turno  @relation(fields: [turnoId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  // Un socio integra un turno una sola vez.
+  @@unique([turnoId, socioId])
+  @@index([turnoId])
+  @@index([socioId])
+}
+
+// ---------------------------------------------------------------------------
+// Rutina: plan de entrenamiento personalizado de un Socio.
+// ejercicios es JSON libre pero estructurado:
+// [{ ejercicio, series, repeticiones, notas }]. La forma se valida en
+// servicio (nunca se confía en el JSON que envía el cliente).
+// ---------------------------------------------------------------------------
+
+model Rutina {
+  id            String   @id @default(cuid())
+  socioId       String
+  socio         Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+  titulo        String
+  fechaCreacion DateTime @default(now())
+  ejercicios    Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([socioId, fechaCreacion])
+}

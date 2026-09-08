@@ -1,0 +1,39 @@
+# Deps
+node_modules/
+.pnp
+.pnp.*
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Vite / PWA
+apps/frontend/dist/
+apps/frontend/dev-dist/
+
+# Prisma
+*.db
+*.db-journal
+
+# Env (conservar los .example)
+.env
+.env.local
+!.env.example
+apps/*/.env
+packages/*/.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# npm cache
+.npm/
