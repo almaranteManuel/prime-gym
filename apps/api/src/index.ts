@@ -6,10 +6,28 @@ import { apiRouter } from './routes/index.js';
 
 const app = express();
 
-// CORS: solo el frontend (+ mismo origen en local). Ajusta FRONTEND_URL en .env.
+// Normalizar origen removiendo trailing slash si existe
+const configuredOrigin = (env.frontendUrl || process.env.FRONTEND_URL || '').replace(/\/$/, '');
+
+// CORS: Soporta Vercel (producción y previews), localhost y la variable configurada
 app.use(
   cors({
-    origin: [env.frontendUrl],
+    origin: (origin, callback) => {
+      // Peticiones sin header Origin (curl, server-to-server, healthchecks)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (
+        origin === configuredOrigin ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost')
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS bloqueado para origen: ${origin}`));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: false,
