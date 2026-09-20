@@ -9,12 +9,12 @@ import { Horarios } from './pages/Horarios.js';
  * el estado local alcanza para el mostrador y evita una dependencia).
  * El Panel del día es la vista inicial.
  */
-export function App() {
+export function App({ onLogout }: { onLogout?: () => void }) {
   const [section, setSection] = useState<SectionId>('dashboard');
 
   return (
     <div className="flex min-h-screen bg-zinc-950 text-zinc-100">
-      <Sidebar active={section} onSelect={setSection} />
+      <Sidebar active={section} onSelect={setSection} onLogout={onLogout} />
       <main className="min-w-0 flex-1">
         {section === 'dashboard' ? <Dashboard /> : section === 'socios' ? <Socios /> : <Horarios />}
       </main>

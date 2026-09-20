@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearAuthToken, getAuthToken } from './auth-storage.js';
 
 /**
  * Capa de servicios HTTP.
@@ -11,3 +12,17 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
   timeout: 10_000,
 });
+
+api.interceptors.request.use((config) => {
+  const token = getAuthToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) clearAuthToken();
+    return Promise.reject(error);
+  },
+);

@@ -40,6 +40,38 @@ export type ID = string;
 
 export const API_PREFIX = '/api' as const;
 
+export const ROLES_USUARIO = ['admin', 'alumno'] as const;
+export type RolUsuario = (typeof ROLES_USUARIO)[number];
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  rol: RolUsuario;
+}
+
+export interface AuthTokenPayload {
+  sub: string;
+  username: string;
+  rol: RolUsuario;
+  iat: number;
+  exp: number;
+}
+
+export interface LoginDTO {
+  username: string;
+  password: string;
+}
+
+export interface RegisterDTO {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
 // ---------------------------------------------------------------------------
 // Dominio gimnasio — enums (espejan los enums de Prisma)
 // ---------------------------------------------------------------------------

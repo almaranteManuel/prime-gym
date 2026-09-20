@@ -21,16 +21,17 @@ packages/
 npm install
 
 # 2. Generar cliente Prisma (apps/api)
-# Nota: el schema viene SIN modelos a propósito. `prisma generate`
-# exige al menos un modelo, así que este paso se ejecuta cuando
-# definas el primero. La estructura (schema + config/prisma.ts) ya está lista.
 npm run prisma:generate
 # o: npx prisma generate --schema apps/api/prisma/schema.prisma
 
 # 3. Variables de entorno
 cp apps/api/.env.example apps/api/.env
 cp apps/frontend/.env.example apps/frontend/.env
-# Edita DATABASE_URL, PORT, FRONTEND_URL, VITE_API_URL
+# Edita DATABASE_URL, PORT, FRONTEND_URL, JWT_SECRET,
+# DEFAULT_ADMIN_PASSWORD y VITE_API_URL
+
+# En una base existente, aplicar el schema de autenticación:
+npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
 
 # 4. Dev simultáneo (API + Frontend)
 npm run dev

@@ -3,6 +3,7 @@ import express from 'express';
 import { env } from './config/env.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { apiRouter } from './routes/index.js';
+import { ensureDefaultAdmin } from './services/auth.service.js';
 
 const app = express();
 
@@ -47,7 +48,16 @@ app.use((_req, res) => {
 // Manejador central de errores (HttpError → status + { message, code })
 app.use(errorHandler);
 
-app.listen(env.port, () => {
+async function start(): Promise<void> {
+  await ensureDefaultAdmin();
+  app.listen(env.port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`[gym-api] listening on http://localhost:${env.port} (${env.nodeEnv})`);
+  });
+}
+
+start().catch((error: unknown) => {
   // eslint-disable-next-line no-console
-  console.log(`[gym-api] listening on http://localhost:${env.port} (${env.nodeEnv})`);
+  console.error('[gym-api] failed to start:', error);
+  process.exitCode = 1;
 });

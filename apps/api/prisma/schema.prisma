@@ -26,6 +26,20 @@ enum DiaSemana {
   DOMINGO
 }
 
+enum RolUsuario {
+  ADMIN
+  ALUMNO
+}
+
+model Usuario {
+  id           String      @id @default(cuid())
+  username     String      @unique
+  passwordHash String
+  rol          RolUsuario  @default(ALUMNO)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Socio: persona atendida en mostrador.
 // ---------------------------------------------------------------------------

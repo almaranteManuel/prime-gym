@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/shared/package.json packages/shared/package.json
+RUN npm ci
+
+COPY . .
+RUN npm run build -w @gym/shared
+
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build -w apps/frontend
+
+# Esta imagen no corre en producción: solo se usa una vez para
+# copiar apps/frontend/dist afuera (ver servicio frontend-builder).

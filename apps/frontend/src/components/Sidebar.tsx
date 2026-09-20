@@ -3,6 +3,7 @@ export type SectionId = 'dashboard' | 'socios' | 'horarios';
 interface SidebarProps {
   active: SectionId;
   onSelect: (section: SectionId) => void;
+  onLogout?: () => void;
 }
 
 const ITEMS: ReadonlyArray<{ id: SectionId; label: string; hint: string }> = [
@@ -15,7 +16,7 @@ const ITEMS: ReadonlyArray<{ id: SectionId; label: string; hint: string }> = [
  * Barra lateral de secciones (presentacional, sin routing).
  * Pensada para crecer: agregar una entrada a ITEMS suma una sección.
  */
-export function Sidebar({ active, onSelect }: SidebarProps) {
+export function Sidebar({ active, onSelect, onLogout }: SidebarProps) {
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-1 border-r border-zinc-800 bg-zinc-950 p-4">
       <div className="px-2 pb-4 pt-2">
@@ -43,6 +44,11 @@ export function Sidebar({ active, onSelect }: SidebarProps) {
           );
         })}
       </nav>
+      {onLogout ? (
+        <button type="button" onClick={onLogout} className="mt-auto rounded-lg px-3 py-2 text-left text-sm text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200">
+          Cerrar sesión
+        </button>
+      ) : null}
     </aside>
   );
 }

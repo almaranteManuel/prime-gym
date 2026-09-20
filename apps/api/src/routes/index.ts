@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { checkRole, verificarToken } from '../middlewares/auth.js';
+import { authRouter } from './auth.routes.js';
 import { dashboardRouter } from './dashboard.routes.js';
 import { healthRouter } from './health.routes.js';
 import { pagosRouter } from './pagos.routes.js';
@@ -11,6 +13,12 @@ export const apiRouter: Router = Router();
 
 // GET /api/health
 apiRouter.use('/health', healthRouter);
+
+// POST /api/auth/login · POST /api/auth/register
+apiRouter.use('/auth', authRouter);
+
+// El resto de la API es administrativa y requiere autenticación.
+apiRouter.use(verificarToken, checkRole(['admin']));
 
 // GET /api/dashboard/hoy
 apiRouter.use('/dashboard', dashboardRouter);

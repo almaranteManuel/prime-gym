@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - /srv/gimnasio/data/postgres:/var/lib/postgresql/data
+    mem_limit: 300m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PORT: 3001
+      FRONTEND_URL: https://${DOMAIN}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 300m
+    networks: [internal]
+
+  # Servicio "de un solo uso": genera el build estático del frontend
+  # y lo deja en /srv/gimnasio/frontend-dist para que Caddy lo sirva.
+  # No corre 24/7 (perfil "build"), así no consume RAM en producción.
+  frontend-builder:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: /api
+    volumes:
+      - /srv/gimnasio/frontend-dist:/output
+    command: sh -c "rm -rf /output/* && cp -r /app/apps/frontend/dist/. /output/"
+    profiles: ["build"]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /srv/gimnasio/frontend-dist:/srv/frontend:ro
+      - caddy_data:/data
+    depends_on:
+      - api
+    mem_limit: 100m
+    networks: [internal]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - caddy
+    mem_limit: 100m
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  caddy_data:

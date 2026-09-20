@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { TURNO_DURACION_MINUTOS } from '@gym/shared';
 import type { ISocio, ITurnoConOcupacion } from '@gym/shared';
 
 interface TurnoCardProps {
@@ -12,6 +13,12 @@ interface TurnoCardProps {
   onDelete: (turno: ITurnoConOcupacion) => void;
 }
 
+function horaFin(horaInicio: string): string {
+  const [horas, minutos] = horaInicio.split(':').map(Number);
+  const totalMinutos = (horas * 60 + minutos + TURNO_DURACION_MINUTOS) % (24 * 60);
+  return `${String(Math.floor(totalMinutos / 60)).padStart(2, '0')}:${String(totalMinutos % 60).padStart(2, '0')}`;
+}
+
 /**
  * Tarjeta de turno (grupo semanal fijo) con ocupación, alumnos y
  * alta/baja de alumnos. Presentacional: fetching y reglas en hook/servicio.
@@ -21,6 +28,7 @@ export function TurnoCard({ turno, sociosActivos, assigning, unassigningId, onAs
 
   const lleno = turno.ocupados >= turno.cupoMax;
   const ratio = turno.cupoMax > 0 ? turno.ocupados / turno.cupoMax : 0;
+  const horario = `${turno.horaInicio} a ${horaFin(turno.horaInicio)}`;
   const barClass = lleno ? 'bg-red-400' : ratio >= 0.8 ? 'bg-amber-400' : 'bg-emerald-400';
   const badgeClass = lleno
     ? 'border-red-900/60 bg-red-950/60 text-red-200'
@@ -35,7 +43,7 @@ export function TurnoCard({ turno, sociosActivos, assigning, unassigningId, onAs
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-zinc-100">
-            {turno.dia} <span className="font-mono text-zinc-300">{turno.horaInicio}</span>
+            {turno.dia} <span className="font-mono text-zinc-300">({horario})</span>
           </h3>
           <p className="mt-0.5 text-xs text-zinc-500">Grupo semanal · 1 hora</p>
         </div>
@@ -77,7 +85,7 @@ export function TurnoCard({ turno, sociosActivos, assigning, unassigningId, onAs
 
       <div className="mt-4 flex gap-2">
         <select
-          aria-label={`Agregar alumno al turno ${turno.dia} ${turno.horaInicio}`}
+          aria-label={`Agregar alumno al turno ${turno.dia} ${horario}`}
           className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors focus:border-zinc-500 disabled:opacity-50"
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
