@@ -4,7 +4,7 @@ set -e
 echo "Aplicando migraciones de Prisma..."
 npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
 
-# AJUSTAR: reemplazar por el archivo de entrada real que genera tu build
-# (ej: apps/api/dist/index.js, apps/api/dist/server.js, apps/api/dist/main.js)
+# Salida de `tsc` con rootDir en la raíz del monorepo (el alias a @gym/shared
+# arrastra packages/shared al compilado), por eso la ruta es dist/apps/api/src.
 echo "Iniciando API..."
-exec node apps/api/dist/index.js
+exec node apps/api/dist/apps/api/src/index.js

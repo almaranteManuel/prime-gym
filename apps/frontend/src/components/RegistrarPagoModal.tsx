@@ -20,6 +20,7 @@ const labelClass = 'mb-1 block text-xs font-medium uppercase tracking-wide text-
 export function RegistrarPagoModal({ socio, submitting, onSubmit, onClose }: RegistrarPagoModalProps) {
   const [monto, setMonto] = useState('');
   const [metodo, setMetodo] = useState<MetodoPago>('EFECTIVO');
+  const [dias, setDias] = useState(socio.diasEntrenamiento?.toString() ?? '');
   const [localError, setLocalError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent): Promise<void> {
@@ -29,8 +30,18 @@ export function RegistrarPagoModal({ socio, submitting, onSubmit, onClose }: Reg
       setLocalError('Ingresa un monto mayor a 0.');
       return;
     }
+    const trimmedDias = dias.trim();
+    let diasEntrenamiento: number | undefined;
+    if (trimmedDias !== '') {
+      const parsedDias = Number(trimmedDias);
+      if (!Number.isInteger(parsedDias) || parsedDias < 1) {
+        setLocalError('Los días por semana deben ser un entero mayor o igual a 1.');
+        return;
+      }
+      diasEntrenamiento = parsedDias;
+    }
     setLocalError(null);
-    await onSubmit({ socioId: socio.id, monto: Math.round(parsed * 100) / 100, metodo });
+    await onSubmit({ socioId: socio.id, monto: Math.round(parsed * 100) / 100, metodo, diasEntrenamiento });
   }
 
   return (
@@ -73,6 +84,19 @@ export function RegistrarPagoModal({ socio, submitting, onSubmit, onClose }: Reg
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label htmlFor="pago-dias" className={labelClass}>Días por semana</label>
+            <input
+              id="pago-dias"
+              className={inputClass}
+              value={dias}
+              onChange={(e) => setDias(e.target.value)}
+              placeholder="Ej. 3"
+              inputMode="numeric"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-zinc-500">Cuántos días piensa asistir. Se usa para armar la rutina.</p>
           </div>
 
           {localError ? (

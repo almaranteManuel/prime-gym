@@ -28,6 +28,7 @@ export function SocioForm({ initialSocio, submitting, formError, onSubmit, onCan
   const [dni, setDni] = useState('');
   const [patologias, setPatologias] = useState('');
   const [objetivos, setObjetivos] = useState('');
+  const [dias, setDias] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
   const isEditing = initialSocio !== null && initialSocio !== undefined;
@@ -38,6 +39,7 @@ export function SocioForm({ initialSocio, submitting, formError, onSubmit, onCan
     setDni(initialSocio?.dni ?? '');
     setPatologias(initialSocio?.patologias ?? '');
     setObjetivos(initialSocio?.objetivos ?? '');
+    setDias(initialSocio?.diasEntrenamiento?.toString() ?? '');
     setLocalError(null);
   }, [initialSocio]);
 
@@ -53,6 +55,17 @@ export function SocioForm({ initialSocio, submitting, formError, onSubmit, onCan
     if (!values.nombre || !values.celular || !values.dni) {
       setLocalError('Nombre, celular y DNI son obligatorios.');
       return;
+    }
+    const trimmedDias = dias.trim();
+    if (trimmedDias === '') {
+      values.diasEntrenamiento = null;
+    } else {
+      const parsedDias = Number(trimmedDias);
+      if (!Number.isInteger(parsedDias) || parsedDias < 1) {
+        setLocalError('Los días por semana deben ser un entero mayor o igual a 1 (o vacío).');
+        return;
+      }
+      values.diasEntrenamiento = parsedDias;
     }
     setLocalError(null);
     onSubmit(values);
@@ -99,6 +112,18 @@ export function SocioForm({ initialSocio, submitting, formError, onSubmit, onCan
             onChange={(e) => setCelular(e.target.value)}
             placeholder="+54 9 ..."
             maxLength={40}
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label htmlFor="socio-dias" className={labelClass}>Días por semana</label>
+          <input
+            id="socio-dias"
+            className={inputClass}
+            value={dias}
+            onChange={(e) => setDias(e.target.value)}
+            placeholder="Ej. 3 (vacío = sin dato)"
+            inputMode="numeric"
             autoComplete="off"
           />
         </div>

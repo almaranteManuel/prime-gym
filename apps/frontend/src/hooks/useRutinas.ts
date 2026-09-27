@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import type { CreateRutinaDTO, IRutina } from '@gym/shared';
-import { createRutinaRequest, fetchRutinasPorSocio } from '../services/rutinas.service.js';
+import { createRutinaRequest, deleteRutinaRequest, fetchRutinasPorSocio } from '../services/rutinas.service.js';
 
 function toErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
@@ -14,7 +14,7 @@ function toErrorMessage(err: unknown): string {
 }
 
 /**
- * Rutinas de un socio: listado y alta.
+ * Rutinas de un socio: listado, alta y baja.
  * Si `socioId` es null no pide nada (el modal aún no eligió alumno).
  */
 export function useRutinas(socioId: string | null) {
@@ -61,11 +61,26 @@ export function useRutinas(socioId: string | null) {
     }
   }, [refresh]);
 
+  const remove = useCallback(async (id: string): Promise<boolean> => {
+    setError(null);
+    try {
+      await deleteRutinaRequest(id);
+      // Baja optimista para respuesta inmediata; luego se refresca.
+      setRutinas((prev) => prev.filter((r) => r.id !== id));
+      await refresh();
+      return true;
+    } catch (err: unknown) {
+      setError(toErrorMessage(err));
+      await refresh();
+      return false;
+    }
+  }, [refresh]);
+
   const clearError = useCallback((): void => {
     setError(null);
   }, []);
 
-  return { rutinas, loading, error, refresh, create, clearError };
+  return { rutinas, loading, error, refresh, create, remove, clearError };
 }
 
 export type UseRutinas = ReturnType<typeof useRutinas>;

@@ -35,7 +35,7 @@ apiRouter.use('/turnos', turnosRouter);
 // DELETE /api/reservas/:id
 apiRouter.use('/reservas', reservasRouter);
 
-// POST /api/rutinas · GET /api/rutinas/socio/:socioId
+// POST /api/rutinas · GET /api/rutinas/socio/:socioId · DELETE /api/rutinas/:id
 apiRouter.use('/rutinas', rutinasRouter);
 
 // GET /api (info base)

@@ -5,45 +5,40 @@ import { SociosTable } from '../components/SociosTable.js';
 import { SocioForm, type SocioFormValues } from '../components/SocioForm.js';
 import { RegistrarPagoModal } from '../components/RegistrarPagoModal.js';
 import { RutinasModal } from '../components/RutinasModal.js';
+import { SocioPerfil } from './SocioPerfil.js';
 
 type Tab = 'activos' | 'inactivos';
 
 /**
- * Página de gestión de socios (AMB + listado + pagos).
+ * Página de gestión de socios (AMB + listado + pagos + perfil).
  * Coordina el hook useSocios con los componentes presentacionales.
- * Las tabs filtran en cliente por `socio.activo`.
+ * Las tabs filtran en cliente por `socio.activo`. El perfil es una
+ * vista local (sin router) seleccionada por id.
  */
 export function Socios() {
   const { socios, loading, error, refresh, create, update, remove, pay, clearError } = useSocios();
   const [tab, setTab] = useState<Tab>('activos');
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<ISocio | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ISocio | null>(null);
   const [payTarget, setPayTarget] = useState<ISocio | null>(null);
   const [paying, setPaying] = useState(false);
   const [paySuccess, setPaySuccess] = useState<string | null>(null);
   const [rutinasTarget, setRutinasTarget] = useState<ISocio | null>(null);
+  const [perfilSocioId, setPerfilSocioId] = useState<string | null>(null);
 
   const activos = useMemo(() => socios.filter((s) => s.activo), [socios]);
   const inactivos = useMemo(() => socios.filter((s) => !s.activo), [socios]);
   const visible = tab === 'activos' ? activos : inactivos;
+  const perfilSocio = perfilSocioId ? (socios.find((s) => s.id === perfilSocioId) ?? null) : null;
 
   function openCreate(): void {
-    setEditing(null);
-    setShowForm(true);
-    clearError();
-  }
-
-  function openEdit(socio: ISocio): void {
-    setEditing(socio);
     setShowForm(true);
     clearError();
   }
 
   function closeForm(): void {
     setShowForm(false);
-    setEditing(null);
   }
 
   function openPay(socio: ISocio): void {
@@ -59,22 +54,27 @@ export function Socios() {
   async function handleSubmit(values: SocioFormValues): Promise<void> {
     setSubmitting(true);
     try {
-      if (editing) {
-        const updated = await update(editing.id, values);
-        if (updated) closeForm();
-      } else {
-        const created = await create(values);
-        if (created) closeForm();
-      }
+      const created = await create(values);
+      if (created) closeForm();
     } finally {
       setSubmitting(false);
     }
   }
 
+  /** Actualización desde el perfil: devuelve éxito para cerrar la edición. */
+  async function handleUpdateFromPerfil(id: string, values: SocioFormValues): Promise<boolean> {
+    const updated = await update(id, values);
+    return updated !== null;
+  }
+
   async function handleConfirmDelete(): Promise<void> {
     if (!confirmDelete) return;
     const ok = await remove(confirmDelete.id);
-    if (ok) setConfirmDelete(null);
+    if (ok) {
+      setConfirmDelete(null);
+      setPerfilSocioId(null);
+      setTab('inactivos');
+    }
   }
 
   async function handlePay(input: CreatePagoDTO): Promise<RegistrarPagoResult | null> {
@@ -129,54 +129,69 @@ export function Socios() {
           </div>
         </header>
 
-        {error ? (
-          <p role="alert" className="mt-4 rounded-xl border border-red-900/60 bg-red-950/50 px-4 py-3 text-sm text-red-200">
-            {error}
-          </p>
-        ) : null}
-        {paySuccess ? (
-          <p role="status" className="mt-4 rounded-xl border border-emerald-900/60 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200">
-            {paySuccess}
-          </p>
-        ) : null}
-
-        <div className="mt-6 inline-flex gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1.5" role="tablist" aria-label="Estado de socios">
-          <button type="button" role="tab" aria-selected={tab === 'activos'} onClick={() => setTab('activos')} className={tabClass('activos')}>
-            Activos · {activos.length}
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'inactivos'} onClick={() => setTab('inactivos')} className={tabClass('inactivos')}>
-            Inactivos · {inactivos.length}
-          </button>
-        </div>
-
-        {showForm ? (
+        {perfilSocio ? (
           <div className="mt-6">
-            <SocioForm
-              initialSocio={editing}
-              submitting={submitting}
-              formError={null}
-              onSubmit={(values) => void handleSubmit(values)}
-              onCancel={closeForm}
+            <SocioPerfil
+              socio={perfilSocio}
+              serverError={error}
+              onBack={() => setPerfilSocioId(null)}
+              onUpdate={handleUpdateFromPerfil}
+              onPay={handlePay}
+              onDeactivate={(s) => setConfirmDelete(s)}
+              onRutinas={(s) => setRutinasTarget(s)}
+              onClearServerError={clearError}
             />
           </div>
-        ) : null}
+        ) : (
+          <>
+            {error ? (
+              <p role="alert" className="mt-4 rounded-xl border border-red-900/60 bg-red-950/50 px-4 py-3 text-sm text-red-200">
+                {error}
+              </p>
+            ) : null}
+            {paySuccess ? (
+              <p role="status" className="mt-4 rounded-xl border border-emerald-900/60 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200">
+                {paySuccess}
+              </p>
+            ) : null}
 
-        <div className="mt-6">
-          {loading && socios.length === 0 ? (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
-              <p className="text-sm text-zinc-400">Cargando socios…</p>
+            <div className="mt-6 inline-flex gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1.5" role="tablist" aria-label="Estado de socios">
+              <button type="button" role="tab" aria-selected={tab === 'activos'} onClick={() => setTab('activos')} className={tabClass('activos')}>
+                Activos · {activos.length}
+              </button>
+              <button type="button" role="tab" aria-selected={tab === 'inactivos'} onClick={() => setTab('inactivos')} className={tabClass('inactivos')}>
+                Inactivos · {inactivos.length}
+              </button>
             </div>
-          ) : (
-            <SociosTable
-              socios={visible}
-              onEdit={openEdit}
-              onDelete={(s) => setConfirmDelete(s)}
-              onPay={openPay}
-              onRutinas={(s) => setRutinasTarget(s)}
-              emptyMessage={tab === 'activos' ? 'No hay socios activos. Da de alta el primero.' : 'No hay socios inactivos.'}
-            />
-          )}
-        </div>
+
+            {showForm ? (
+              <div className="mt-6">
+                <SocioForm
+                  initialSocio={null}
+                  submitting={submitting}
+                  formError={null}
+                  onSubmit={(values) => void handleSubmit(values)}
+                  onCancel={closeForm}
+                />
+              </div>
+            ) : null}
+
+            <div className="mt-6">
+              {loading && socios.length === 0 ? (
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
+                  <p className="text-sm text-zinc-400">Cargando socios…</p>
+                </div>
+              ) : (
+                <SociosTable
+                  socios={visible}
+                  onPay={openPay}
+                  onVerPerfil={(s) => { setPerfilSocioId(s.id); clearError(); setPaySuccess(null); }}
+                  emptyMessage={tab === 'activos' ? 'No hay socios activos. Da de alta el primero.' : 'No hay socios inactivos.'}
+                />
+              )}
+            </div>
+          </>
+        )}
 
         {payTarget ? (
           <RegistrarPagoModal socio={payTarget} submitting={paying} onSubmit={handlePay} onClose={closePay} />

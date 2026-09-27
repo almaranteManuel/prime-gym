@@ -7,6 +7,11 @@ export async function createRutinaRequest(input: CreateRutinaDTO): Promise<IRuti
   return res.data;
 }
 
+/** DELETE /api/rutinas/:id — elimina una rutina de un alumno. */
+export async function deleteRutinaRequest(id: string): Promise<void> {
+  await api.delete(`/rutinas/${encodeURIComponent(id)}`);
+}
+
 /** GET /api/rutinas/socio/:socioId — rutinas de un alumno. */
 export async function fetchRutinasPorSocio(socioId: string): Promise<IRutina[]> {
   const res = await api.get<unknown>(`/rutinas/socio/${encodeURIComponent(socioId)}`);

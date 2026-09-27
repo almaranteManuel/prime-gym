@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
-import type { CreateTurnoDTO, ITurnoConOcupacion } from '@gym/shared';
+import type { CreateTurnoDTO, DiaSemana, ITurnoConOcupacion } from '@gym/shared';
 import { useSocios } from '../hooks/useSocios.js';
 import { useTurnos } from '../hooks/useTurnos.js';
 import { TurnoForm } from '../components/TurnoForm.js';
 import { TurnoCard } from '../components/TurnoCard.js';
+
+/** Columnas fijas de la grilla semanal (el gym no opera domingos). */
+const DIAS_COLUMNAS: DiaSemana[] = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
 
 /**
  * Gestión de horarios: alta de turnos y asignación de alumnos.
@@ -21,6 +24,16 @@ export function Horarios() {
   const [confirmDelete, setConfirmDelete] = useState<ITurnoConOcupacion | null>(null);
 
   const sociosActivos = useMemo(() => socios.filter((s) => s.activo), [socios]);
+
+  const turnosPorDia = useMemo(() => {
+    const agrupados = {} as Record<DiaSemana, ITurnoConOcupacion[]>;
+    for (const dia of DIAS_COLUMNAS) agrupados[dia] = [];
+    for (const turno of turnos) {
+      if (agrupados[turno.dia]) agrupados[turno.dia].push(turno);
+    }
+    for (const dia of DIAS_COLUMNAS) agrupados[dia].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+    return agrupados;
+  }, [turnos]);
 
   async function handleCreate(values: CreateTurnoDTO): Promise<void> {
     setSubmitting(true);
@@ -58,7 +71,7 @@ export function Horarios() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Horarios</h1>
@@ -110,19 +123,41 @@ export function Horarios() {
               <p className="text-sm text-zinc-400">No hay turnos. Crea el primero (ej. Lunes 18:00, cupo 5).</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {turnos.map((turno) => (
-                <TurnoCard
-                  key={turno.id}
-                  turno={turno}
-                  sociosActivos={sociosActivos}
-                  assigning={assigningId === turno.id}
-                  unassigningId={unassigningId}
-                  onAssign={(turnoId, socioId) => void handleAssign(turnoId, socioId)}
-                  onUnassign={(reservaId) => void handleUnassign(reservaId)}
-                  onDelete={(t) => setConfirmDelete(t)}
-                />
-              ))}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              {DIAS_COLUMNAS.map((dia) => {
+                const delDia = turnosPorDia[dia];
+                return (
+                  <section key={dia} aria-label={`Turnos del ${dia}`} className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/40 p-2">
+                    <header className="flex items-center justify-between px-1 pb-2 pt-1">
+                      <h2 className="text-xs font-bold uppercase tracking-wide text-zinc-300">{dia}</h2>
+                      <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[11px] font-semibold text-zinc-300">
+                        {delDia.length}
+                      </span>
+                    </header>
+                    <div className="flex flex-1 flex-col gap-3">
+                      {delDia.length === 0 ? (
+                        <p className="rounded-lg border border-dashed border-zinc-800 px-2 py-4 text-center text-[11px] text-zinc-500">
+                          Sin turnos
+                        </p>
+                      ) : (
+                        delDia.map((turno) => (
+                          <TurnoCard
+                            key={turno.id}
+                            turno={turno}
+                            sociosActivos={sociosActivos}
+                            assigning={assigningId === turno.id}
+                            unassigningId={unassigningId}
+                            compact
+                            onAssign={(turnoId, socioId) => void handleAssign(turnoId, socioId)}
+                            onUnassign={(reservaId) => void handleUnassign(reservaId)}
+                            onDelete={(t) => setConfirmDelete(t)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
         </div>

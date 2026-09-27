@@ -6,8 +6,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Tuning para el Droplet de 1GB RAM (el contenedor está limitado a 300m).
+    command: postgres -c shared_buffers=64MB -c work_mem=4MB -c max_connections=50
     volumes:
-      - /srv/gimnasio/data/postgres:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     mem_limit: 300m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -24,7 +26,10 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: 3001
-      FRONTEND_URL: https://${DOMAIN}
+      # Origen permitido por CORS. Debe coincidir con la URL desde la que se
+      # entra al panel. Por defecto https://<DOMAIN>; para probar con la IP
+      # pública definir FRONTEND_URL=http://<IP> en .env.
+      FRONTEND_URL: ${FRONTEND_URL:-https://${DOMAIN}}
       NODE_ENV: production
     depends_on:
       postgres:
@@ -33,39 +38,35 @@ services:
     networks: [internal]
 
   # Servicio "de un solo uso": genera el build estático del frontend
-  # y lo deja en /srv/gimnasio/frontend-dist para que Caddy lo sirva.
+  # y lo deja en ./data/frontend-dist para que Caddy lo sirva.
   # No corre 24/7 (perfil "build"), así no consume RAM en producción.
+  # El frontend se compila para el mismo origen (sin VITE_API_URL): Caddy
+  # hace de reverse proxy de /api hacia api:3001.
   frontend-builder:
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
-      args:
-        VITE_API_URL: /api
     volumes:
-      - /srv/gimnasio/frontend-dist:/output
+      - ./data/frontend-dist:/output
     command: sh -c "rm -rf /output/* && cp -r /app/apps/frontend/dist/. /output/"
     profiles: ["build"]
 
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Usado por docker/Caddyfile ({$DOMAIN}) para emitir y renovar el SSL.
+      DOMAIN: ${DOMAIN:?Define DOMAIN en .env con el dominio de produccion}
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
-      - /srv/gimnasio/frontend-dist:/srv/frontend:ro
+      - ./data/frontend-dist:/srv/frontend:ro
       - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - api
-    mem_limit: 100m
-    networks: [internal]
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - caddy
     mem_limit: 100m
     networks: [internal]
 
@@ -74,3 +75,4 @@ networks:
 
 volumes:
   caddy_data:
+  caddy_config:

@@ -37,3 +37,6 @@ Thumbs.db
 
 # npm cache
 .npm/
+
+# Datos locales del despliegue Docker (postgres, dist del frontend, backups)
+data/

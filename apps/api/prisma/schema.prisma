@@ -53,6 +53,8 @@ model Socio {
   objetivos  String?  @db.Text // objetivos del socio, texto libre
   activo     Boolean  @default(true)
   fechaAlta  DateTime @default(now()) @db.Date
+  /// Días por semana que planea asistir (se pregunta al pagar; null = sin dato).
+  diasEntrenamiento Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -150,8 +152,14 @@ model Reserva {
 
 // ---------------------------------------------------------------------------
 // Rutina: plan de entrenamiento personalizado de un Socio.
-// ejercicios es JSON libre pero estructurado:
-// [{ ejercicio, series, repeticiones, notas }]. La forma se valida en
+// Estructura jerárquica DÍA → BLOQUE → ejercicios:
+//
+// dias = [
+//   { nombre: 'DÍA 1', etapa: '...', objetivo: '...',
+//     bloques: [{ nombre: 'Bloque 1', ejercicios: [...] }] }
+// ]
+//
+// `dias` es JSON libre pero estructurado: la forma se valida en
 // servicio (nunca se confía en el JSON que envía el cliente).
 // ---------------------------------------------------------------------------
 
@@ -161,7 +169,7 @@ model Rutina {
   socio         Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
   titulo        String
   fechaCreacion DateTime @default(now())
-  ejercicios    Json
+  dias          Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

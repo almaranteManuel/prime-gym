@@ -17,17 +17,18 @@ export default defineConfig({
     VitePWA({
       // 7. Estrategia generateSW: genera el Service Worker en build
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'apple-touch-icon.png', 'logo-prime.webp', 'logo-prime-transparent.webp', 'prime-icon.jpeg'],
       manifest: {
-        name: 'Gimnasio App',
-        short_name: 'Gimnasio',
-        description: 'Gestión de gimnasio: miembros, clases y entrenamientos.',
+        name: 'Prime Gym',
+        short_name: 'Prime Gym',
+        description: 'Prime Gym: gestión de miembros, clases y entrenamientos.',
         theme_color: '#0ea5e9',
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        // Iconos generados desde public/prime-icon.jpeg (ver public/ para regenerar).
         icons: [
           {
             src: 'pwa-192x192.png',

@@ -5,6 +5,7 @@ import { prisma } from '../config/prisma.js';
 import { addMonthsUTC, parseDateOnly, toDateOnlyString, toDateOnlyUTC } from '../utils/dates.js';
 import { HttpError } from '../utils/http-error.js';
 import { findUltimaMembresia, toMembresiaDTO } from './membresias.service.js';
+import { normalizeDiasEntrenamiento } from './socios.service.js';
 
 /** Meses de vigencia que otorga cada pago total. */
 const MEMBRESIA_DURACION_MESES = 1 as const;
@@ -24,6 +25,29 @@ function toPagoDTO(p: Pago): IPago {
 /** Serializa una membresía sin exponer el modelo de Prisma. */
 export function toMembresiaResponse(m: Membresia): IMembresia {
   return toMembresiaDTO(m);
+}
+
+/** Tope de registros devueltos por el historial (evita payloads pesados). */
+export const HISTORIAL_PAGOS_MAX = 200 as const;
+
+/**
+ * Historial de pagos de un socio (más recientes primero).
+ * - 400 si el id es vacío.
+ * - 404 si el socio no existe.
+ */
+export async function listPagosPorSocio(socioId: string): Promise<IPago[]> {
+  const id = socioId?.trim();
+  if (!id) throw new HttpError(400, 'El id del socio es obligatorio', 'VALIDATION_ERROR');
+
+  const socio = await prisma.socio.findUnique({ where: { id } });
+  if (!socio) throw new HttpError(404, 'Socio no encontrado', 'SOCIO_NO_ENCONTRADO');
+
+  const pagos = await prisma.pago.findMany({
+    where: { socioId: id },
+    orderBy: [{ fechaPago: 'desc' }, { createdAt: 'desc' }],
+    take: HISTORIAL_PAGOS_MAX,
+  });
+  return pagos.map(toPagoDTO);
 }
 
 /**
@@ -64,6 +88,9 @@ export async function registrarPago(input: CreatePagoDTO): Promise<RegistrarPago
   } else {
     fechaPago = toDateOnlyUTC(new Date());
   }
+
+  // Días por semana que planea asistir (opcional): actualiza el dato del socio.
+  const diasEntrenamiento = normalizeDiasEntrenamiento(input.diasEntrenamiento);
 
   return prisma.$transaction(async (tx) => {
     const socio = await tx.socio.findUnique({ where: { id: socioId } });
@@ -107,6 +134,9 @@ export async function registrarPago(input: CreatePagoDTO): Promise<RegistrarPago
     if (!socio.activo) {
       await tx.socio.update({ where: { id: socioId }, data: { activo: true } });
       socioReactivado = true;
+    }
+    if (diasEntrenamiento !== undefined) {
+      await tx.socio.update({ where: { id: socioId }, data: { diasEntrenamiento } });
     }
 
     return { pago: toPagoDTO(pago), membresia: toMembresiaDTO(membresia), membresiaExtendida, socioReactivado };

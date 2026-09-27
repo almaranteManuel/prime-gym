@@ -1,13 +1,32 @@
-:80 {
+# Reutilizable por cada bloque de sitio: SPA + reverse proxy de la API.
+(app) {
 	encode gzip
 
-	handle /api/* {
+	# Express monta el router en /api/* (ver apps/api/src/index.ts), por lo que
+	# el prefijo NO se elimina: se reenvía tal cual a api:3001.
+	handle /api* {
 		reverse_proxy api:3001
 	}
 
+	# Estáticos del frontend + fallback SPA: cualquier ruta que no sea un
+	# fichero real resuelve a /index.html para que React Router maneje el 404.
 	handle {
 		root * /srv/frontend
 		try_files {path} /index.html
 		file_server
 	}
+}
+
+# Producción: HTTPS automático con certificado gestionado y renovado por Caddy
+# (Let's Encrypt / ZeroSSL) + redirección automática http -> https para DOMAIN.
+# Requiere los puertos 80 (challenge HTTP-01) y 443 abiertos en el VPS.
+{$DOMAIN:localhost} {
+	import app
+}
+
+# Fallback HTTP sin hostname: permite probar con la IP pública del VPS
+# mientras el DNS del dominio aún no apunta al servidor. Caddy no intenta
+# emitir certificado para este bloque y no redirige a HTTPS.
+:80 {
+	import app
 }

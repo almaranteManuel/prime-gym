@@ -2,20 +2,18 @@ import type { ISocio } from '@gym/shared';
 
 interface SociosTableProps {
   socios: ISocio[];
-  onEdit: (socio: ISocio) => void;
-  onDelete: (socio: ISocio) => void;
   onPay: (socio: ISocio) => void;
-  onRutinas: (socio: ISocio) => void;
+  onVerPerfil: (socio: ISocio) => void;
   emptyMessage?: string;
 }
 
 /**
  * Tabla presentacional de socios (solo UI, sin fetching).
  * Esquema estrictamente oscuro: zinc-900/950, texto de alto contraste.
- * Los inactivos solo ofrecen "Registrar pago" (reactiva + otorga membresía);
- * la edición y la baja aplican a activos.
+ * El detalle (edición, baja, rutinas, historial) vive en el perfil;
+ * aquí solo hay pago rápido y acceso al perfil.
  */
-export function SociosTable({ socios, onEdit, onDelete, onPay, onRutinas, emptyMessage }: SociosTableProps) {
+export function SociosTable({ socios, onPay, onVerPerfil, emptyMessage }: SociosTableProps) {
   if (!Array.isArray(socios)) {
     return (
       <div className="rounded-xl border border-red-900/60 bg-red-950/50 p-8 text-center">
@@ -64,32 +62,14 @@ export function SociosTable({ socios, onEdit, onDelete, onPay, onRutinas, emptyM
                   >
                     $ Pago
                   </button>
-                  {socio.activo ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onRutinas(socio)}
-                        title="Rutinas personalizadas"
-                        className="rounded-lg border border-sky-900/60 bg-sky-950/60 px-3 py-1.5 text-xs font-medium text-sky-200 transition-colors hover:border-sky-800 hover:bg-sky-900/60"
-                      >
-                        Rutinas
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onEdit(socio)}
-                        className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-100 transition-colors hover:border-zinc-600 hover:bg-zinc-700"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(socio)}
-                        className="rounded-lg border border-red-900/60 bg-red-950/60 px-3 py-1.5 text-xs font-medium text-red-200 transition-colors hover:border-red-800 hover:bg-red-900/60"
-                      >
-                        Baja
-                      </button>
-                    </>
-                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => onVerPerfil(socio)}
+                    title="Ver perfil del socio"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-100 transition-colors hover:border-zinc-600 hover:bg-zinc-700"
+                  >
+                    Ver perfil
+                  </button>
                 </div>
               </td>
             </tr>

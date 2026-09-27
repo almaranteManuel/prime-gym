@@ -116,6 +116,8 @@ export interface ISocio {
   patologias: string | null;
   objetivos: string | null;
   activo: boolean;
+  /** Días por semana que planea asistir (null = sin dato). Se pregunta al pagar. */
+  diasEntrenamiento: number | null;
   /** "YYYY-MM-DD" */
   fechaAlta: string;
   createdAt: string;
@@ -172,6 +174,8 @@ export interface CreateSocioDTO {
   dni: string;
   patologias?: string | null;
   objetivos?: string | null;
+  /** Días por semana que planea asistir. Se carga al pagar o en edición. */
+  diasEntrenamiento?: number | null;
 }
 
 /**
@@ -188,6 +192,8 @@ export interface CreatePagoDTO {
   metodo: MetodoPago;
   /** "YYYY-MM-DD". @default hoy */
   fechaPago?: string;
+  /** Días por semana que planea asistir. Actualiza el dato del socio. */
+  diasEntrenamiento?: number | null;
 }
 
 /** Respuesta de POST /api/pagos. */
@@ -268,15 +274,30 @@ export interface IDashboardHoy {
 }
 
 // ---------------------------------------------------------------------------
-// Dominio gimnasio — Rutinas personalizadas
+// Dominio gimnasio — Rutinas personalizadas (estructura DÍA → BLOQUE → ejercicios)
 // ---------------------------------------------------------------------------
 
-/** Un ejercicio de texto libre pero estructurado dentro de una rutina. */
+/** Un ejercicio de texto libre pero estructurado dentro de un bloque. */
 export interface IEjercicioRutina {
   ejercicio: string;
   series: string;
   repeticiones: string;
   notas: string;
+}
+
+/** Bloque dentro de un día (nombre libre, ej. "Movilidad", "Fuerza", "Tren superior"). */
+export interface IBloqueRutina {
+  nombre: string;
+  ejercicios: IEjercicioRutina[];
+}
+
+/** Un día de entrenamiento (genérico: DÍA 1, DÍA 2, ...). */
+export interface IDiaRutina {
+  /** Ej. 'DÍA 1'. */
+  nombre: string;
+  etapa: string;
+  objetivo: string;
+  bloques: IBloqueRutina[];
 }
 
 /** Rutina con los datos del socio para mostrar y exportar. */
@@ -286,7 +307,7 @@ export interface IRutina {
   titulo: string;
   /** ISO string. */
   fechaCreacion: string;
-  ejercicios: IEjercicioRutina[];
+  dias: IDiaRutina[];
   socio: Pick<ISocio, 'id' | 'nombre' | 'dni'>;
   createdAt: string;
   updatedAt: string;
@@ -294,7 +315,7 @@ export interface IRutina {
 
 export interface CreateRutinaDTO {
   socioId: string;
-  /** Ej. 'Fuerza - Día 1'. */
+  /** Ej. 'Hipertrofia - 4 días'. */
   titulo: string;
-  ejercicios: IEjercicioRutina[];
+  dias: IDiaRutina[];
 }

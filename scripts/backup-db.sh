@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-COMPOSE_DIR="/opt/gimnasio"
-BACKUP_DIR="/srv/gimnasio/backups"
+COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKUP_DIR="${BACKUP_DIR:-${COMPOSE_DIR}/data/backups}"
 RETENTION_DAYS=14
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 FILENAME="primegym_${TIMESTAMP}.sql.gz"

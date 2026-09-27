@@ -28,8 +28,9 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-100">
       <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-        <h1 className="text-2xl font-bold">Prime Gym</h1>
-        <p className="mt-1 text-sm text-zinc-400">Ingresá a tu cuenta</p>
+        <img src="/logo-prime-transparent.webp" alt="Prime Gym" className="mx-auto h-20 w-auto object-contain" />
+        <h1 className="sr-only">Prime Gym</h1>
+        <p className="mt-3 text-center text-sm text-zinc-400">Ingresá a tu cuenta</p>
         {error ? <p role="alert" className="mt-4 rounded-lg bg-red-950 px-3 py-2 text-sm text-red-200">{error}</p> : null}
         <label className="mt-5 block text-sm text-zinc-300">
           Usuario

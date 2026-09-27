@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { createSocio, deactivateSocio, listSocios, updateSocio, type EstadoSocios } from '../services/socios.service.js';
+import { listPagosPorSocio } from '../services/pagos.service.js';
+import { listMembresiasPorSocio } from '../services/membresias.service.js';
 import { HttpError } from '../utils/http-error.js';
 
 /**
@@ -46,6 +48,26 @@ export async function deleteSocioController(req: Request, res: Response, next: N
   try {
     const socio = await deactivateSocio(req.params.id);
     res.status(200).json(socio);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/socios/:id/pagos — historial de pagos del socio (más recientes primero). */
+export async function listSocioPagosController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const pagos = await listPagosPorSocio(req.params.id);
+    res.status(200).json(pagos);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/socios/:id/membresias — historial de membresías del socio (vigencia reciente primero). */
+export async function listSocioMembresiasController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const membresias = await listMembresiasPorSocio(req.params.id);
+    res.status(200).json(membresias);
   } catch (err) {
     next(err);
   }

@@ -18,6 +18,7 @@ function toSocioDTO(s: Socio): ISocio {
     patologias: s.patologias,
     objetivos: s.objetivos,
     activo: s.activo,
+    diasEntrenamiento: s.diasEntrenamiento ?? null,
     fechaAlta: toDateOnlyString(s.fechaAlta),
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
@@ -59,6 +60,20 @@ function assertId(id: unknown): string {
   return id.trim();
 }
 
+/**
+ * Días por semana que planea asistir. Sin tope máximo (lo maneja el dueño):
+ * solo se exige entero ≥ 1. `null`/`undefined` conservan el sentido de
+ * "sin dato" (null lo borra en edición, undefined no toca el valor).
+ */
+export function normalizeDiasEntrenamiento(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    throw new HttpError(400, 'El campo diasEntrenamiento debe ser un entero mayor o igual a 1', 'VALIDATION_ERROR');
+  }
+  return value;
+}
+
 /** Filtro de listado por estado de baja lógica. */
 export type EstadoSocios = 'activos' | 'inactivos' | 'todos';
 
@@ -88,10 +103,11 @@ export async function createSocio(input: CreateSocioDTO): Promise<ISocio> {
   const dni = assertNonEmptyString(input.dni, 'dni', DNI_MAX);
   const patologias = normalizeOptionalText(input.patologias, 'patologias') ?? null;
   const objetivos = normalizeOptionalText(input.objetivos, 'objetivos') ?? null;
+  const diasEntrenamiento = normalizeDiasEntrenamiento(input.diasEntrenamiento) ?? null;
 
   try {
     const socio = await prisma.socio.create({
-      data: { nombre, celular, dni, patologias, objetivos },
+      data: { nombre, celular, dni, patologias, objetivos, diasEntrenamiento },
     });
     return toSocioDTO(socio);
   } catch (err) {
@@ -114,7 +130,7 @@ export async function updateSocio(id: string, input: UpdateSocioDTO): Promise<IS
     throw new HttpError(400, 'El cuerpo de la petición es inválido', 'VALIDATION_ERROR');
   }
 
-  const data: { nombre?: string; celular?: string; dni?: string; patologias?: string | null; objetivos?: string | null } = {};
+  const data: { nombre?: string; celular?: string; dni?: string; patologias?: string | null; objetivos?: string | null; diasEntrenamiento?: number | null } = {};
 
   if (input.nombre !== undefined) data.nombre = assertNonEmptyString(input.nombre, 'nombre', NOMBRE_MAX);
   if (input.celular !== undefined) data.celular = assertNonEmptyString(input.celular, 'celular', CELULAR_MAX);
@@ -126,6 +142,10 @@ export async function updateSocio(id: string, input: UpdateSocioDTO): Promise<IS
   if (input.objetivos !== undefined) {
     const v = normalizeOptionalText(input.objetivos, 'objetivos');
     if (v !== undefined) data.objetivos = v;
+  }
+  if (input.diasEntrenamiento !== undefined) {
+    const v = normalizeDiasEntrenamiento(input.diasEntrenamiento);
+    if (v !== undefined) data.diasEntrenamiento = v;
   }
 
   if (Object.keys(data).length === 0) {

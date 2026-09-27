@@ -20,8 +20,8 @@ export function Sidebar({ active, onSelect, onLogout }: SidebarProps) {
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-1 border-r border-zinc-800 bg-zinc-950 p-4">
       <div className="px-2 pb-4 pt-2">
-        <p className="text-base font-bold tracking-tight text-zinc-100">Prime Gym</p>
-        <p className="mt-0.5 text-xs text-zinc-500">Gestión del gimnasio</p>
+        <img src="/logo-prime-transparent.webp" alt="Prime Gym" className="h-12 w-auto object-contain" />
+        <p className="mt-1.5 text-xs text-zinc-500">Gestión del gimnasio</p>
       </div>
       <nav aria-label="Secciones" className="flex flex-col gap-1">
         {ITEMS.map((item) => {

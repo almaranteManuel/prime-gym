@@ -1,10 +1,13 @@
 import { Prisma, type Rutina } from '@prisma/client';
-import type { CreateRutinaDTO, IEjercicioRutina, IRutina } from '@gym/shared';
+import type { CreateRutinaDTO, IBloqueRutina, IDiaRutina, IEjercicioRutina, IRutina } from '@gym/shared';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http-error.js';
 
 const TITULO_MAX = 120;
-const EJERCICIOS_MAX = 100;
+const DIA_NOMBRE_MAX = 40;
+const ETAPA_MAX = 120;
+const OBJETIVO_MAX = 200;
+const BLOQUE_NOMBRE_MAX = 120;
 const EJERCICIO_MAX = 120;
 const SERIES_MAX = 20;
 const REPETICIONES_MAX = 20;
@@ -36,28 +39,59 @@ function assertTexto(value: unknown, field: string, max: number, obligatorio: bo
 }
 
 // ---------------------------------------------------------------------------
-// Validador puro (testeable sin Prisma ni Express — ver TESTER.md §3).
-// El JSON de ejercicios es dato externo: se valida forma y contenido
+// Validadores puros (testeables sin Prisma ni Express — ver TESTER.md §3).
+// El JSON de días es dato externo: se valida forma y contenido
 // antes de persistir, nunca se guarda tal cual llega.
+// Sin topes de cantidad (los maneja el dueño): solo se exige la
+// estructura mínima (día → ≥1 bloque → ≥1 ejercicio con nombre).
 // ---------------------------------------------------------------------------
 
-export function validarEjercicios(value: unknown): IEjercicioRutina[] {
+function validarEjercicio(item: unknown, ruta: string): IEjercicioRutina {
+  if (item === null || typeof item !== 'object') {
+    throw new HttpError(400, `El ejercicio ${ruta} es inválido`, 'VALIDATION_ERROR');
+  }
+  const e = item as Record<string, unknown>;
+  return {
+    ejercicio: assertTexto(e.ejercicio, `${ruta}.ejercicio`, EJERCICIO_MAX, true),
+    series: assertTexto(e.series, `${ruta}.series`, SERIES_MAX, false),
+    repeticiones: assertTexto(e.repeticiones, `${ruta}.repeticiones`, REPETICIONES_MAX, false),
+    notas: assertTexto(e.notas, `${ruta}.notas`, NOTAS_MAX, false),
+  };
+}
+
+function validarBloque(item: unknown, ruta: string): IBloqueRutina {
+  if (item === null || typeof item !== 'object') {
+    throw new HttpError(400, `El bloque ${ruta} es inválido`, 'VALIDATION_ERROR');
+  }
+  const b = item as Record<string, unknown>;
+  const nombre = assertTexto(b.nombre, `${ruta}.nombre`, BLOQUE_NOMBRE_MAX, true);
+  if (!Array.isArray(b.ejercicios) || b.ejercicios.length === 0) {
+    throw new HttpError(400, `El bloque ${ruta} debe tener al menos un ejercicio`, 'VALIDATION_ERROR');
+  }
+  return {
+    nombre,
+    ejercicios: b.ejercicios.map((e: unknown, i: number) => validarEjercicio(e, `${ruta}.ejercicios[${i}]`)),
+  };
+}
+
+export function validarDias(value: unknown): IDiaRutina[] {
   if (!Array.isArray(value) || value.length === 0) {
-    throw new HttpError(400, 'La rutina debe tener al menos un ejercicio', 'VALIDATION_ERROR');
+    throw new HttpError(400, 'La rutina debe tener al menos un día', 'VALIDATION_ERROR');
   }
-  if (value.length > EJERCICIOS_MAX) {
-    throw new HttpError(400, `La rutina supera los ${EJERCICIOS_MAX} ejercicios`, 'VALIDATION_ERROR');
-  }
-  return value.map((item: unknown, i: number): IEjercicioRutina => {
+  return value.map((item: unknown, i: number): IDiaRutina => {
+    const ruta = `dias[${i}]`;
     if (item === null || typeof item !== 'object') {
-      throw new HttpError(400, `El ejercicio #${i + 1} es inválido`, 'VALIDATION_ERROR');
+      throw new HttpError(400, `El día ${ruta} es inválido`, 'VALIDATION_ERROR');
     }
-    const e = item as Record<string, unknown>;
+    const d = item as Record<string, unknown>;
+    if (!Array.isArray(d.bloques) || d.bloques.length === 0) {
+      throw new HttpError(400, `El día ${ruta} debe tener al menos un bloque`, 'VALIDATION_ERROR');
+    }
     return {
-      ejercicio: assertTexto(e.ejercicio, `ejercicios[${i}].ejercicio`, EJERCICIO_MAX, true),
-      series: assertTexto(e.series, `ejercicios[${i}].series`, SERIES_MAX, false),
-      repeticiones: assertTexto(e.repeticiones, `ejercicios[${i}].repeticiones`, REPETICIONES_MAX, false),
-      notas: assertTexto(e.notas, `ejercicios[${i}].notas`, NOTAS_MAX, false),
+      nombre: assertTexto(d.nombre, `${ruta}.nombre`, DIA_NOMBRE_MAX, true),
+      etapa: assertTexto(d.etapa, `${ruta}.etapa`, ETAPA_MAX, false),
+      objetivo: assertTexto(d.objetivo, `${ruta}.objetivo`, OBJETIVO_MAX, false),
+      bloques: d.bloques.map((b: unknown, j: number) => validarBloque(b, `${ruta}.bloques[${j}]`)),
     };
   });
 }
@@ -68,7 +102,7 @@ function toRutinaDTO(r: Rutina & { socio: { id: string; nombre: string; dni: str
     socioId: r.socioId,
     titulo: r.titulo,
     fechaCreacion: r.fechaCreacion.toISOString(),
-    ejercicios: r.ejercicios as unknown as IEjercicioRutina[],
+    dias: r.dias as unknown as IDiaRutina[],
     socio: r.socio,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
@@ -79,7 +113,7 @@ const SOCIO_SELECT = { id: true, nombre: true, dni: true } as const;
 
 /**
  * Crea y asigna una rutina a un socio.
- * - 400 si título/ejercicios son inválidos.
+ * - 400 si título/días son inválidos.
  * - 404 si el socio no existe.
  */
 export async function createRutina(input: CreateRutinaDTO): Promise<IRutina> {
@@ -88,7 +122,7 @@ export async function createRutina(input: CreateRutinaDTO): Promise<IRutina> {
   }
   const socioId = assertId(input.socioId);
   const titulo = assertTexto(input.titulo, 'titulo', TITULO_MAX, true);
-  const ejercicios = validarEjercicios(input.ejercicios);
+  const dias = validarDias(input.dias);
 
   const socio = await prisma.socio.findUnique({ where: { id: socioId }, select: SOCIO_SELECT });
   if (!socio) throw new HttpError(404, 'Socio no encontrado', 'SOCIO_NO_ENCONTRADO');
@@ -97,7 +131,7 @@ export async function createRutina(input: CreateRutinaDTO): Promise<IRutina> {
     data: {
       socioId,
       titulo,
-      ejercicios: ejercicios as unknown as Prisma.InputJsonValue,
+      dias: dias as unknown as Prisma.InputJsonValue,
     },
     include: { socio: { select: SOCIO_SELECT } },
   });
@@ -119,4 +153,15 @@ export async function listRutinasPorSocio(socioId: string): Promise<IRutina[]> {
     orderBy: { fechaCreacion: 'desc' },
   });
   return rutinas.map(toRutinaDTO);
+}
+
+/**
+ * Elimina una rutina por id.
+ * - 404 si no existe.
+ */
+export async function deleteRutina(id: string): Promise<void> {
+  const rutinaId = assertId(id);
+  const existing = await prisma.rutina.findUnique({ where: { id: rutinaId } });
+  if (!existing) throw new HttpError(404, 'Rutina no encontrada', 'RUTINA_NO_ENCONTRADA');
+  await prisma.rutina.delete({ where: { id: rutinaId } });
 }
