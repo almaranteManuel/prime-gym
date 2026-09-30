@@ -2,25 +2,25 @@
 # viva en el free tier (Render duerme las instancias tras 15 min de
 # inactividad). Solo realiza un GET a /health; no dispara builds ni
 # deployments del repo.
-name: Keep API alive
+# name: Keep API alive
 
-on:
-  schedule:
-    - cron: "*/13 * * * *"
-  workflow_dispatch:
+# on:
+  # schedule:
+    # - cron: "*/13 * * * *"
+  # workflow_dispatch:
 
-permissions:
-  contents: read
+# permissions:
+  # contents: read
 
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ping Render health endpoint
-        run: |
-          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "https://TU-API.render.com/health")
-          echo "HTTP status: $status"
-          if [ "$status" != "200" ]; then
-            echo "La API respondió con $status (se esperaba 200)"
-            exit 1
-          fi
+# jobs:
+  # ping:
+    # runs-on: ubuntu-latest
+    # steps:
+      # - name: Ping Render health endpoint
+        # run: |
+          # status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "https://TU-API.render.com/health")
+          # echo "HTTP status: $status"
+          # if [ "$status" != "200" ]; then
+            # echo "La API respondió con $status (se esperaba 200)"
+            # exit 1
+          # fi
