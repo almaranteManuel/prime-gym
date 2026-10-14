@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Prisma exige DIRECT_URL (misma conexión directa en local/Docker).
+      DIRECT_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: 3001
       # Origen permitido por CORS. Debe coincidir con la URL desde la que se
       # entra al panel. Por defecto https://<DOMAIN>; para probar con la IP

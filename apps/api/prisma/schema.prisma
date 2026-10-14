@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Conexión directa (sin pooler) para migraciones. En Neon: URL sin "-pooler".
+  // En local/Docker puede ser igual a DATABASE_URL (ver docker-compose.yml).
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------------------------
