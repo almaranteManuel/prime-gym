@@ -11,7 +11,8 @@ function isJwtClaims(value: unknown): value is JwtClaims {
   return (
     typeof claims.sub === 'string' &&
     typeof claims.username === 'string' &&
-    (claims.rol === 'admin' || claims.rol === 'alumno')
+    (claims.rol === 'admin' || claims.rol === 'alumno') &&
+    (claims.socioId === undefined || claims.socioId === null || typeof claims.socioId === 'string')
   );
 }
 
@@ -29,7 +30,12 @@ export function verificarToken(req: Request, _res: Response, next: NextFunction)
   try {
     const decoded: unknown = jwt.verify(token, env.jwtSecret);
     if (!isJwtClaims(decoded)) throw new HttpError(401, 'Token inválido', 'INVALID_TOKEN');
-    req.user = { id: decoded.sub, username: decoded.username, rol: decoded.rol };
+    req.user = {
+      id: decoded.sub,
+      username: decoded.username,
+      rol: decoded.rol,
+      socioId: typeof decoded.socioId === 'string' ? decoded.socioId : null,
+    };
     next();
   } catch (error) {
     next(error instanceof HttpError ? error : new HttpError(401, 'Token inválido o expirado', 'INVALID_TOKEN'));

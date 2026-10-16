@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { createSocio, deactivateSocio, listSocios, updateSocio, type EstadoSocios } from '../services/socios.service.js';
+import { createSocio, deactivateSocio, deleteSocioDefinitivo, listSocios, updateSocio, type EstadoSocios } from '../services/socios.service.js';
 import { listPagosPorSocio } from '../services/pagos.service.js';
 import { listMembresiasPorSocio } from '../services/membresias.service.js';
 import { HttpError } from '../utils/http-error.js';
@@ -23,11 +23,11 @@ export async function listSociosController(req: Request, res: Response, next: Ne
   }
 }
 
-/** POST /api/socios — alta de socio. */
+/** POST /api/socios — alta de socio con usuario de acceso y turnos (transaccional). */
 export async function createSocioController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const socio = await createSocio(req.body);
-    res.status(201).json(socio);
+    const result = await createSocio(req.body);
+    res.status(201).json(result);
   } catch (err) {
     next(err);
   }
@@ -48,6 +48,16 @@ export async function deleteSocioController(req: Request, res: Response, next: N
   try {
     const socio = await deactivateSocio(req.params.id);
     res.status(200).json(socio);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** DELETE /api/socios/:id/definitivo — borrado físico (409 si tiene historial). */
+export async function deleteSocioDefinitivoController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await deleteSocioDefinitivo(req.params.id);
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }

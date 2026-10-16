@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
 import type { DiaSemana } from '@gym/shared';
-import { parseDateOnly } from '../utils/dates.js';
+import { addMonthsUTC, parseDateOnly } from '../utils/dates.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -45,4 +45,29 @@ export function hoyEnBuenosAires(now: Date = new Date()): HoyBA {
   const dia = DIAS_POR_INDICE[h.day()];
   if (!dia) throw new Error(`Día de la semana fuera de rango (${h.day()})`);
   return { dia, fecha: parsed, fechaStr };
+}
+
+/** Mes vigente "YYYY-MM" en la zona del gimnasio. */
+export function mesActualEnBuenosAires(now: Date = new Date()): string {
+  return dayjs(now).tz(GYM_TZ).format('YYYY-MM');
+}
+
+export interface RangoMes {
+  mes: string;
+  /** Inicio del mes (medianoche UTC), listo para Prisma @db.Date. */
+  inicio: Date;
+  /** Inicio del mes siguiente (límite exclusivo). */
+  fin: Date;
+}
+
+/**
+ * Valida "YYYY-MM" y devuelve el rango [inicio, fin) en UTC para
+ * comparar con columnas @db.Date (misma convención que el resto).
+ * Retorna null si el mes no es válido.
+ */
+export function rangoMesEnBuenosAires(mes: string): RangoMes | null {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return null;
+  const inicio = parseDateOnly(`${mes}-01`);
+  if (!inicio) return null;
+  return { mes, inicio, fin: addMonthsUTC(inicio, 1) };
 }

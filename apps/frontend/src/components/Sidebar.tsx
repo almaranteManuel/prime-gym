@@ -7,7 +7,7 @@ interface SidebarProps {
 }
 
 const ITEMS: ReadonlyArray<{ id: SectionId; label: string; hint: string }> = [
-  { id: 'dashboard', label: 'Panel del día', hint: 'Turnos y asistencia de hoy' },
+  { id: 'dashboard', label: 'Inicio', hint: 'Información y turnos de hoy' },
   { id: 'socios', label: 'Socios', hint: 'AMB, pagos y membresías' },
   { id: 'horarios', label: 'Horarios', hint: 'Turnos y alumnos' },
 ];

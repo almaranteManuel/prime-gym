@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
-import type { CreatePagoDTO, CreateSocioDTO, ISocio, RegistrarPagoResult, UpdateSocioDTO } from '@gym/shared';
+import type { CreatePagoDTO, CreateSocioDTO, CreateSocioWithAccessResult, ISocio, RegistrarPagoResult, UpdateSocioDTO } from '@gym/shared';
 import {
   createSocioRequest,
+  deleteSocioDefinitivoRequest,
   deleteSocioRequest,
   fetchSocios,
   updateSocioRequest,
@@ -53,12 +54,12 @@ export function useSocios() {
     void refresh();
   }, [refresh]);
 
-  const create = useCallback(async (input: CreateSocioDTO): Promise<ISocio | null> => {
+  const create = useCallback(async (input: CreateSocioDTO): Promise<CreateSocioWithAccessResult | null> => {
     setError(null);
     try {
-      const created = await createSocioRequest(input);
-      setSocios((prev) => [created, ...prev]);
-      return created;
+      const result = await createSocioRequest(input);
+      setSocios((prev) => [result.socio, ...prev]);
+      return result;
     } catch (err: unknown) {
       const message = toErrorMessage(err);
       setError(message);
@@ -76,6 +77,20 @@ export function useSocios() {
       const message = toErrorMessage(err);
       setError(message);
       return null;
+    }
+  }, []);
+
+  /** Borrado físico: quita al socio de la lista (desaparece de ambas tabs). */
+  const removeDefinitivo = useCallback(async (id: string): Promise<boolean> => {
+    setError(null);
+    try {
+      const result = await deleteSocioDefinitivoRequest(id);
+      setSocios((prev) => prev.filter((s) => s.id !== result.id));
+      return true;
+    } catch (err: unknown) {
+      const message = toErrorMessage(err);
+      setError(message);
+      return false;
     }
   }, []);
 
@@ -114,7 +129,7 @@ export function useSocios() {
     setError(null);
   }, []);
 
-  return { socios, loading, error, refresh, create, update, remove, pay, clearError };
+  return { socios, loading, error, refresh, create, update, remove, removeDefinitivo, pay, clearError };
 }
 
 export type UseSocios = ReturnType<typeof useSocios>;

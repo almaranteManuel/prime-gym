@@ -24,6 +24,7 @@ function decodePayload(token: string): AuthTokenPayload | null {
       sub: value.sub,
       username: value.username,
       rol: value.rol,
+      socioId: typeof value.socioId === 'string' ? value.socioId : null,
       iat: typeof value.iat === 'number' ? value.iat : 0,
       exp: value.exp,
     };
@@ -39,7 +40,7 @@ export function getCurrentUser(): AuthUser | null {
     if (token) clearAuthToken();
     return null;
   }
-  return { id: payload.sub, username: payload.username, rol: payload.rol };
+  return { id: payload.sub, username: payload.username, rol: payload.rol, socioId: payload.socioId };
 }
 
 export async function login(input: LoginDTO): Promise<AuthUser> {

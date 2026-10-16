@@ -3,6 +3,8 @@ import type { CreateRutinaDTO, IRutina, ISocio } from '@gym/shared';
 import { useRutinas } from '../hooks/useRutinas.js';
 import { RutinaBuilder } from './RutinaBuilder.js';
 import { RutinaDetalle, contarEjercicios } from './RutinaDetalle.js';
+import { CompartirWhatsappButton } from './CompartirWhatsappButton.js';
+import { buildMensajeRutina } from '../utils/rutina-whatsapp.js';
 
 interface RutinasModalProps {
   socioInicial: ISocio;
@@ -56,6 +58,7 @@ export function RutinasModal({ socioInicial, sociosActivos, onClose }: RutinasMo
   }
 
   const socioNombre = sociosActivos.find((s) => s.id === socioId)?.nombre ?? 'Socio';
+  const socioCelular = sociosActivos.find((s) => s.id === socioId)?.celular ?? null;
 
   // El alta usa el constructor a pantalla completa (reemplaza el modal).
   if (vista.kind === 'nueva') {
@@ -153,7 +156,10 @@ export function RutinasModal({ socioInicial, sociosActivos, onClose }: RutinasMo
                   </button>
                 )}
               </div>
-              <RutinaDetalle rutina={vista.rutina} />
+              <RutinaDetalle
+                rutina={vista.rutina}
+                celular={sociosActivos.find((s) => s.id === vista.rutina.socioId)?.celular ?? null}
+              />
             </div>
           ) : loading ? (
             <p className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 text-center text-sm text-zinc-400">Cargando rutinas…</p>
@@ -188,6 +194,12 @@ export function RutinasModal({ socioInicial, sociosActivos, onClose }: RutinasMo
                       >
                         Ver →
                       </button>
+                      <CompartirWhatsappButton
+                        celular={socioCelular}
+                        mensaje={buildMensajeRutina(socioNombre, r.titulo, r.dias.length, contarEjercicios(r))}
+                        label="WhatsApp"
+                        className="rounded-lg border border-[#25D366]/60 px-2.5 py-1.5 text-xs font-medium text-[#25D366] hover:bg-[#25D366]/10"
+                      />
                       {confirmandoId === r.id ? (
                         <>
                           <button

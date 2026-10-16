@@ -27,6 +27,7 @@ function horaFin(horaInicio: string): string {
  */
 export function TurnoCard({ turno, sociosActivos, assigning, unassigningId, onAssign, onUnassign, onDelete, compact = false }: TurnoCardProps) {
   const [selected, setSelected] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   const lleno = turno.ocupados >= turno.cupoMax;
   const ratio = turno.cupoMax > 0 ? turno.ocupados / turno.cupoMax : 0;
@@ -42,22 +43,40 @@ export function TurnoCard({ turno, sociosActivos, assigning, unassigningId, onAs
 
   return (
     <article className={`flex flex-col rounded-xl border border-zinc-800 bg-zinc-900 ${compact ? 'p-3' : 'p-5'}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className={`font-semibold text-zinc-100 ${compact ? 'text-sm' : 'text-base'}`}>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        aria-label={`${expanded ? 'Contraer' : 'Expandir'} turno ${turno.dia} ${horario}`}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex min-w-0 items-center gap-1.5">
+          <svg
+            aria-hidden="true"
+            className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${expanded ? 'rotate-90' : ''}`}
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className={`shrink-0 whitespace-nowrap font-semibold text-zinc-100 ${compact ? 'text-sm' : 'text-base'}`}>
             {compact ? (
               <span className="font-mono">{horario}</span>
             ) : (
               <>{turno.dia} <span className="font-mono text-zinc-300">({horario})</span></>
             )}
-          </h3>
-          {compact ? null : <p className="mt-0.5 text-xs text-zinc-500">Grupo semanal · 1 hora</p>}
-        </div>
+          </span>
+        </span>
         <span className={`shrink-0 rounded-full border font-semibold ${badgeClass} ${compact ? 'px-2 py-0.5 text-[11px]' : 'px-3 py-1 text-xs'}`}>
           {turno.ocupados}/{turno.cupoMax}
         </span>
-      </div>
+      </button>
 
+      {expanded ? (
+        <>
+      {compact ? null : <p className="mt-1 text-xs text-zinc-500">Grupo semanal · 1 hora</p>}
       <div className={`${compact ? 'mt-2' : 'mt-3'} h-1.5 overflow-hidden rounded-full bg-zinc-800`} role="progressbar" aria-valuenow={turno.ocupados} aria-valuemin={0} aria-valuemax={turno.cupoMax}>
         <div className={`h-full rounded-full transition-all ${barClass}`} style={{ width: `${Math.min(100, ratio * 100)}%` }} />
       </div>
@@ -119,6 +138,8 @@ export function TurnoCard({ turno, sociosActivos, assigning, unassigningId, onAs
       >
         Eliminar turno
       </button>
+        </>
+      ) : null}
     </article>
   );
 }

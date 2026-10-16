@@ -47,12 +47,16 @@ export interface AuthUser {
   id: string;
   username: string;
   rol: RolUsuario;
+  /** Socio vinculado (null en admins o usuarios sin vínculo). */
+  socioId: string | null;
 }
 
 export interface AuthTokenPayload {
   sub: string;
   username: string;
   rol: RolUsuario;
+  /** Null en admins o en tokens emitidos antes del vínculo usuario-socio. */
+  socioId: string | null;
   iat: number;
   exp: number;
 }
@@ -170,12 +174,33 @@ export interface IReserva {
 export interface CreateSocioDTO {
   nombre: string;
   celular: string;
-  /** Único. Se normaliza (trim) en el backend. */
+  /** Único. Se normaliza (trim) en el backend. También se usa como username inicial. */
   dni: string;
   patologias?: string | null;
   objetivos?: string | null;
   /** Días por semana que planea asistir. Se carga al pagar o en edición. */
   diasEntrenamiento?: number | null;
+  /** Turnos a asignar en la misma alta (solo se aceptan con cupo libre). */
+  turnoIds?: string[];
+}
+
+/** Respuesta de POST /api/socios (alta con usuario + reservas en transacción). */
+export interface SocioAccesoUsuario {
+  id: string;
+  username: string;
+  rol: RolUsuario;
+}
+
+export interface CreateSocioWithAccessResult {
+  socio: ISocio;
+  /** Usuario ALUMNO creado con username = dni. Nunca incluye el hash. */
+  usuario: SocioAccesoUsuario;
+  reservas: IReserva[];
+  /**
+   * La clave inicial es el DNI: el socio deberá cambiarla cuando exista
+   * el panel de alumno (pendiente explícito).
+   */
+  requiereCambioPassword: true;
 }
 
 /**
@@ -271,6 +296,37 @@ export interface IDashboardHoy {
   dia: DiaSemana;
   /** Turnos del día ordenados por horaInicio. */
   turnos: IDashboardTurno[];
+}
+
+/** Estado de cobranza de un socio activo según su membresía más vigente. */
+export type EstadoCobranza = 'vencida' | 'porVencer';
+
+export interface ICobranzaItem {
+  socioId: string;
+  nombre: string;
+  dni: string;
+  /** "YYYY-MM-DD": fin de la membresía más vigente. */
+  fechaFin: string;
+  estado: EstadoCobranza;
+}
+
+export interface IResumenPagosMes {
+  /** "YYYY-MM" en America/Argentina/Buenos_Aires. */
+  mes: string;
+  cantidad: number;
+  /** Monto total cobrado (número, sin centavos de Decimal). */
+  total: number;
+  porMetodo: Record<MetodoPago, { cantidad: number; total: number }>;
+}
+
+/** Respuesta de GET /api/dashboard/resumen?mes=YYYY-MM. */
+export interface IResumenDashboard {
+  mes: string;
+  sociosActivos: number;
+  sociosTotal: number;
+  pagosMes: IResumenPagosMes;
+  /** Socios activos con membresía vencida o que vence en ≤7 días. Sin importes. */
+  cobranza: ICobranzaItem[];
 }
 
 // ---------------------------------------------------------------------------

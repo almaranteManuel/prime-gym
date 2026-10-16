@@ -28,12 +28,12 @@ function normalizeCredentials(input: unknown): LoginDTO {
   return { username: username.trim().toLowerCase(), password };
 }
 
-function toAuthUser(user: { id: string; username: string; rol: 'ADMIN' | 'ALUMNO' }): AuthenticatedUser {
-  return { id: user.id, username: user.username, rol: user.rol === 'ADMIN' ? 'admin' : 'alumno' };
+function toAuthUser(user: { id: string; username: string; rol: 'ADMIN' | 'ALUMNO'; socioId: string | null }): AuthenticatedUser {
+  return { id: user.id, username: user.username, rol: user.rol === 'ADMIN' ? 'admin' : 'alumno', socioId: user.socioId };
 }
 
 function createToken(user: AuthenticatedUser): string {
-  const claims: JwtClaims = { sub: user.id, username: user.username, rol: user.rol };
+  const claims: JwtClaims = { sub: user.id, username: user.username, rol: user.rol, socioId: user.socioId };
   const options: SignOptions = { expiresIn: env.jwtExpiresIn as SignOptions['expiresIn'] };
   return jwt.sign(claims, env.jwtSecret, options);
 }

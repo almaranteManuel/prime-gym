@@ -4,6 +4,7 @@ interface SociosTableProps {
   socios: ISocio[];
   onPay: (socio: ISocio) => void;
   onVerPerfil: (socio: ISocio) => void;
+  onDeleteDefinitivo: (socio: ISocio) => void;
   emptyMessage?: string;
 }
 
@@ -13,7 +14,7 @@ interface SociosTableProps {
  * El detalle (edición, baja, rutinas, historial) vive en el perfil;
  * aquí solo hay pago rápido y acceso al perfil.
  */
-export function SociosTable({ socios, onPay, onVerPerfil, emptyMessage }: SociosTableProps) {
+export function SociosTable({ socios, onPay, onVerPerfil, onDeleteDefinitivo, emptyMessage }: SociosTableProps) {
   if (!Array.isArray(socios)) {
     return (
       <div className="rounded-xl border border-red-900/60 bg-red-950/50 p-8 text-center">
@@ -69,6 +70,14 @@ export function SociosTable({ socios, onPay, onVerPerfil, emptyMessage }: Socios
                     className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-100 transition-colors hover:border-zinc-600 hover:bg-zinc-700"
                   >
                     Ver perfil
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteDefinitivo(socio)}
+                    title="Eliminar socio por completo"
+                    className="rounded-lg border border-red-900/60 bg-red-950/40 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:border-red-800 hover:bg-red-900/60"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </td>

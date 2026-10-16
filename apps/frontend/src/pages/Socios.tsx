@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import type { CreatePagoDTO, ISocio, RegistrarPagoResult } from '@gym/shared';
+import type { CreatePagoDTO, CreateSocioDTO, CreateSocioWithAccessResult, ISocio, RegistrarPagoResult, UpdateSocioDTO } from '@gym/shared';
 import { useSocios } from '../hooks/useSocios.js';
 import { SociosTable } from '../components/SociosTable.js';
-import { SocioForm, type SocioFormValues } from '../components/SocioForm.js';
+import { SocioAltaWizard } from '../components/SocioAltaWizard.js';
 import { RegistrarPagoModal } from '../components/RegistrarPagoModal.js';
 import { RutinasModal } from '../components/RutinasModal.js';
 import { SocioPerfil } from './SocioPerfil.js';
@@ -16,11 +16,12 @@ type Tab = 'activos' | 'inactivos';
  * vista local (sin router) seleccionada por id.
  */
 export function Socios() {
-  const { socios, loading, error, refresh, create, update, remove, pay, clearError } = useSocios();
+  const { socios, loading, error, refresh, create, update, remove, removeDefinitivo, pay, clearError } = useSocios();
   const [tab, setTab] = useState<Tab>('activos');
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ISocio | null>(null);
+  const [confirmDeleteDefinitivo, setConfirmDeleteDefinitivo] = useState<ISocio | null>(null);
   const [payTarget, setPayTarget] = useState<ISocio | null>(null);
   const [paying, setPaying] = useState(false);
   const [paySuccess, setPaySuccess] = useState<string | null>(null);
@@ -39,6 +40,21 @@ export function Socios() {
 
   function closeForm(): void {
     setShowForm(false);
+    clearError();
+  }
+
+  /**
+   * Alta en 2 pasos (wizard): el backend crea Socio + Usuario ALUMNO +
+   * reservas en una transacción. El wizard muestra el éxito; acá solo se
+   * delega en el hook (que ya antepone el socio a la lista).
+   */
+  async function handleWizardSubmit(values: CreateSocioDTO): Promise<CreateSocioWithAccessResult | null> {
+    setSubmitting(true);
+    try {
+      return await create(values);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function openPay(socio: ISocio): void {
@@ -51,18 +67,7 @@ export function Socios() {
     setPayTarget(null);
   }
 
-  async function handleSubmit(values: SocioFormValues): Promise<void> {
-    setSubmitting(true);
-    try {
-      const created = await create(values);
-      if (created) closeForm();
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  /** Actualización desde el perfil: devuelve éxito para cerrar la edición. */
-  async function handleUpdateFromPerfil(id: string, values: SocioFormValues): Promise<boolean> {
+  async function handleUpdateFromPerfil(id: string, values: UpdateSocioDTO): Promise<boolean> {
     const updated = await update(id, values);
     return updated !== null;
   }
@@ -74,6 +79,15 @@ export function Socios() {
       setConfirmDelete(null);
       setPerfilSocioId(null);
       setTab('inactivos');
+    }
+  }
+
+  async function handleConfirmDeleteDefinitivo(): Promise<void> {
+    if (!confirmDeleteDefinitivo) return;
+    const ok = await removeDefinitivo(confirmDeleteDefinitivo.id);
+    if (ok) {
+      setConfirmDeleteDefinitivo(null);
+      setPerfilSocioId(null);
     }
   }
 
@@ -108,7 +122,7 @@ export function Socios() {
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Socios</h1>
-            <p className="mt-1 text-sm text-zinc-400">Alta, edición, baja lógica, pagos y membresías.</p>
+            <p className="mt-1 text-sm text-zinc-400">Alta en 2 pasos (datos + horarios, con acceso a la app), edición, baja lógica, pagos y membresías.</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -166,12 +180,12 @@ export function Socios() {
 
             {showForm ? (
               <div className="mt-6">
-                <SocioForm
-                  initialSocio={null}
+                <SocioAltaWizard
                   submitting={submitting}
-                  formError={null}
-                  onSubmit={(values) => void handleSubmit(values)}
+                  serverError={error}
+                  onSubmit={(values) => handleWizardSubmit(values)}
                   onCancel={closeForm}
+                  onClearServerError={clearError}
                 />
               </div>
             ) : null}
@@ -186,12 +200,41 @@ export function Socios() {
                   socios={visible}
                   onPay={openPay}
                   onVerPerfil={(s) => { setPerfilSocioId(s.id); clearError(); setPaySuccess(null); }}
+                  onDeleteDefinitivo={(s) => { setConfirmDeleteDefinitivo(s); clearError(); }}
                   emptyMessage={tab === 'activos' ? 'No hay socios activos. Da de alta el primero.' : 'No hay socios inactivos.'}
                 />
               )}
             </div>
           </>
         )}
+
+        {confirmDeleteDefinitivo ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-md rounded-xl border border-red-900/60 bg-zinc-900 p-6">
+              <h2 className="text-base font-semibold text-red-200">Eliminar por completo a {confirmDeleteDefinitivo.nombre}</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Esta acción borra al socio y sus reservas/rutinas de forma permanente. No se puede deshacer.
+                Si tiene pagos o membresías registrados, el servidor lo rechazará: en ese caso use la baja lógica desde el perfil.
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteDefinitivo(null)}
+                  className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmDeleteDefinitivo()}
+                  className="rounded-lg border border-red-800 bg-red-950 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-900"
+                >
+                  Eliminar por completo
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {payTarget ? (
           <RegistrarPagoModal socio={payTarget} submitting={paying} onSubmit={handlePay} onClose={closePay} />

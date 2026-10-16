@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createSocioController,
   deleteSocioController,
+  deleteSocioDefinitivoController,
   listSocioMembresiasController,
   listSocioPagosController,
   listSociosController,
@@ -16,3 +17,4 @@ sociosRouter.get('/:id/pagos', listSocioPagosController);
 sociosRouter.get('/:id/membresias', listSocioMembresiasController);
 sociosRouter.put('/:id', updateSocioController);
 sociosRouter.delete('/:id', deleteSocioController);
+sociosRouter.delete('/:id/definitivo', deleteSocioDefinitivoController);

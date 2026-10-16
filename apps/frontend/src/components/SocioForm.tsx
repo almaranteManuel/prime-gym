@@ -110,7 +110,7 @@ export function SocioForm({ initialSocio, submitting, formError, onSubmit, onCan
             className={inputClass}
             value={celular}
             onChange={(e) => setCelular(e.target.value)}
-            placeholder="+54 9 ..."
+            placeholder="Ej. 3434222333"
             maxLength={40}
             autoComplete="off"
           />

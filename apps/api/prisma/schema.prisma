@@ -39,6 +39,12 @@ model Usuario {
   username     String      @unique
   passwordHash String
   rol          RolUsuario  @default(ALUMNO)
+  // Vínculo 1-1 opcional con Socio (null en admins). La cuenta ALUMNO
+  // de un socio se crea en la misma transacción del alta (ver
+  // socios.service.createSocio); la clave inicial es el DNI y deberá
+  // cambiarse cuando exista el panel de alumno.
+  socioId      String?     @unique
+  socio        Socio?      @relation(fields: [socioId], references: [id], onDelete: Cascade)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
@@ -66,6 +72,7 @@ model Socio {
   pagos      Pago[]
   reservas   Reserva[]
   rutinas    Rutina[]
+  usuario    Usuario?
 
   @@index([activo])
 }

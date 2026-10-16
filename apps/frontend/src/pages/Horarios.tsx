@@ -5,8 +5,8 @@ import { useTurnos } from '../hooks/useTurnos.js';
 import { TurnoForm } from '../components/TurnoForm.js';
 import { TurnoCard } from '../components/TurnoCard.js';
 
-/** Columnas fijas de la grilla semanal (el gym no opera domingos). */
-const DIAS_COLUMNAS: DiaSemana[] = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+/** Columnas fijas de la grilla semanal (el gym no opera sábados ni domingos). */
+const DIAS_COLUMNAS: DiaSemana[] = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'];
 
 /**
  * Gestión de horarios: alta de turnos y asignación de alumnos.
@@ -123,7 +123,7 @@ export function Horarios() {
               <p className="text-sm text-zinc-400">No hay turnos. Crea el primero (ej. Lunes 18:00, cupo 5).</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {DIAS_COLUMNAS.map((dia) => {
                 const delDia = turnosPorDia[dia];
                 return (

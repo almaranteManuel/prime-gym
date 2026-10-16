@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import html2pdf from 'html2pdf.js';
 import type { IRutina } from '@gym/shared';
 import { RutinaPdf } from './RutinaPdf.js';
+import { CompartirWhatsappButton } from './CompartirWhatsappButton.js';
+import { buildMensajeRutina } from '../utils/rutina-whatsapp.js';
 
 function slug(texto: string): string {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'rutina';
@@ -18,8 +20,10 @@ export function contarEjercicios(rutina: IRutina): number {
 /**
  * Detalle de rutina en dark-mode + exportación a PDF claro e imprimible.
  * El nodo para el PDF vive fuera de pantalla (fondo blanco solo allí).
+ * Incluye botón WhatsApp: abre el chat del alumno (celular) con el mensaje
+ * listo; el PDF descargado se adjunta en la conversación.
  */
-export function RutinaDetalle({ rutina }: { rutina: IRutina }) {
+export function RutinaDetalle({ rutina, celular }: { rutina: IRutina; celular: string | null | undefined }) {
   const pdfRef = useRef<HTMLDivElement>(null);
   const [exportando, setExportando] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -54,14 +58,20 @@ export function RutinaDetalle({ rutina }: { rutina: IRutina }) {
             {rutina.socio.nombre} · {new Date(rutina.fechaCreacion).toLocaleDateString('es-AR')} · {rutina.dias.length} días · {contarEjercicios(rutina)} ejercicios
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void handleDescargarPdf()}
-          disabled={exportando}
-          className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-emerald-300 disabled:opacity-50"
-        >
-          {exportando ? 'Generando…' : 'Descargar PDF'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void handleDescargarPdf()}
+            disabled={exportando}
+            className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-emerald-300 disabled:opacity-50"
+          >
+            {exportando ? 'Generando…' : 'Descargar PDF'}
+          </button>
+          <CompartirWhatsappButton
+            celular={celular}
+            mensaje={buildMensajeRutina(rutina.socio.nombre, rutina.titulo, rutina.dias.length, contarEjercicios(rutina))}
+          />
+        </div>
       </div>
 
       {pdfError ? (
