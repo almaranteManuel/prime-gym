@@ -213,8 +213,8 @@ export function Socios() {
             <div className="w-full max-w-md rounded-xl border border-red-900/60 bg-zinc-900 p-6">
               <h2 className="text-base font-semibold text-red-200">Eliminar por completo a {confirmDeleteDefinitivo.nombre}</h2>
               <p className="mt-2 text-sm text-zinc-400">
-                Esta acción borra al socio y sus reservas/rutinas de forma permanente. No se puede deshacer.
-                Si tiene pagos o membresías registrados, el servidor lo rechazará: en ese caso use la baja lógica desde el perfil.
+                Esta acción borra al socio y todo su historial (pagos, membresías, reservas, rutinas y acceso a la app) de forma permanente. No se puede deshacer.
+                Si el socio está activo y tiene pagos o membresías, primero hay que darle la baja lógica (desde su perfil o la lista de inactivos) y luego eliminarlo.
               </p>
               <div className="mt-5 flex justify-end gap-2">
                 <button
@@ -250,6 +250,7 @@ export function Socios() {
               <h2 className="text-base font-semibold">Dar de baja a {confirmDelete.nombre}</h2>
               <p className="mt-2 text-sm text-zinc-400">
                 Se realizará una baja lógica: el socio pasará a la pestaña Inactivos pero sus datos se conservan.
+                Se liberarán sus turnos asignados (si se reactiva, habrá que reasignar horarios).
               </p>
               <div className="mt-5 flex justify-end gap-2">
                 <button

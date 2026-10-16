@@ -256,11 +256,13 @@ export async function updateSocio(id: string, input: UpdateSocioDTO): Promise<IS
 /**
  * Borrado físico de un socio (elimina la fila por completo).
  * - 404 si el socio no existe.
- * - 409 si tiene historial (pagos o membresías): son registros contables
- *   que no deben desaparecer (el schema además los protege con Restrict).
- *   En ese caso corresponde la baja lógica.
- * En cascada se eliminan reservas, rutinas, membresías sin pagos y el
- * usuario de acceso del socio (FK Usuario.socioId con onDelete Cascade).
+ * - 409 (SOCIO_CON_HISTORIAL) si está ACTIVO y tiene historial
+ *   (pagos o membresías): primero corresponde la baja lógica, para no
+ *   borrar de un clic registros contables de un socio en actividad.
+ * - Si está INACTIVO (baja por vencimiento o por el dueño), se elimina
+ *   todo en transacción: pagos, membresías, reservas, rutinas y usuario
+ *   de acceso (estos últimos por cascada del schema). Es irreversible y
+ *   altera el historial de cobranza: usar solo para socios dados de baja.
  */
 export async function deleteSocioDefinitivo(id: string): Promise<{ id: string }> {
   const socioId = assertId(id);
@@ -274,20 +276,29 @@ export async function deleteSocioDefinitivo(id: string): Promise<{ id: string }>
     prisma.pago.count({ where: { socioId } }),
     prisma.membresia.count({ where: { socioId } }),
   ]);
-  if (pagos > 0 || membresias > 0) {
+  if ((pagos > 0 || membresias > 0) && existing.activo) {
     throw new HttpError(
       409,
-      'El socio tiene historial de pagos/membresías y no puede eliminarse por completo. Use la baja lógica.',
+      'El socio está activo y tiene historial de pagos/membresías. Dele la baja lógica primero y luego elimínelo por completo.',
       'SOCIO_CON_HISTORIAL',
     );
   }
 
-  await prisma.socio.delete({ where: { id: socioId } });
+  await prisma.$transaction(async (tx) => {
+    // Los pagos bloquean el borrado (Restrict hacia Socio y Membresia):
+    // se eliminan primero; las membresías, reservas, rutinas y el usuario
+    // de acceso caen por la cascada del schema al borrar el socio.
+    await tx.pago.deleteMany({ where: { socioId } });
+    await tx.socio.delete({ where: { id: socioId } });
+  });
   return { id: socioId };
 }
 
 /**
  * Baja lógica de un socio (activo = false).
+ * Libera sus reservas en turnos (devuelve el cupo) en la misma transacción:
+ * un socio dado de baja no debe seguir ocupando lugar. Si luego se
+ * reactiva con un pago, los horarios se reasignan manualmente.
  * - 404 si el socio no existe o ya está dado de baja.
  */
 export async function deactivateSocio(id: string): Promise<ISocio> {
@@ -298,9 +309,12 @@ export async function deactivateSocio(id: string): Promise<ISocio> {
     throw new HttpError(404, 'Socio no encontrado', 'SOCIO_NO_ENCONTRADO');
   }
 
-  const socio = await prisma.socio.update({
-    where: { id: socioId },
-    data: { activo: false },
+  const socio = await prisma.$transaction(async (tx) => {
+    await tx.reserva.deleteMany({ where: { socioId } });
+    return tx.socio.update({
+      where: { id: socioId },
+      data: { activo: false },
+    });
   });
   return toSocioDTO(socio);
 }
